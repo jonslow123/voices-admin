@@ -1,0 +1,12 @@
+/* src/app/globals.css */
+/* You might not need much here anymore, Chakra UI provides a CSSReset/Normalize */
+/* Keep font imports if you have specific ones like Inter */
+
+body {
+  /* ChakraProvider will handle background and text colors based on its theme */
+  min-height: 100vh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; /* If Inter is still desired */
+}
+
+/* Remove custom scrollbar styles if you want Chakra's defaults or will re-theme it via Chakra */
+  

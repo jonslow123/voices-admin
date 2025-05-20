@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #121212;
+  --card-background: #1e1e1e;
+  --accent: #6366f1;
+  --accent-light: #818cf8;
+  --text-primary: #f3f4f6;
+  --text-secondary: #a1a1aa;
+  --border: #2e2e2e;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --color-scheme: dark;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text-primary);
+  min-height: 100vh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+@layer components {
+  .container-custom {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  .card {
+    @apply bg-card-background border border-border rounded-xl shadow-lg p-6;
+  }
+  
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium transition-all duration-200;
+  }
+  
+  .btn-primary {
+    @apply bg-accent text-red hover:bg-accent-light;
+  }
+  
+  .btn-outline {
+    @apply border border-border text-text-primary hover:bg-card-background;
+  }
+  
+  .btn-sm {
+    @apply px-3 py-1 text-sm;
+  }
+  
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  
+  .badge-success {
+    @apply bg-success/20 text-success;
+  }
+  
+  .badge-warning {
+    @apply bg-warning/20 text-warning;
+  }
+  
+  .badge-danger {
+    @apply bg-danger/20 text-danger;
+  }
+  
+  .table-container {
+    @apply overflow-hidden rounded-xl border border-border;
+  }
+  
+  .table {
+    @apply min-w-full divide-y divide-border;
+  }
+  
+  .table thead {
+    @apply bg-background/50;
+  }
+  
+  .table th {
+    @apply px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider;
+  }
+  
+  .table td {
+    @apply px-6 py-4 whitespace-nowrap text-sm;
+  }
+  
+  .table tr {
+    @apply border-b border-border hover:bg-background/50 transition-colors;
+  }
+  
+  .input {
+    @apply block w-full rounded-lg border border-border bg-background px-3 py-2 text-sm
+      placeholder-text-secondary shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent;
+  }
+  
+  .label {
+    @apply block text-sm font-medium text-text-secondary mb-1;
+  }
+  
+  .nav-link {
+    @apply px-3 py-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-card-background transition-colors;
+  }
+  
+  .nav-link-active {
+    @apply px-3 py-2 rounded-lg text-accent bg-accent/10 font-medium;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--card-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3f3f3f;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4f4f4f;
+}
