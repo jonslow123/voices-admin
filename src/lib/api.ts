@@ -7,7 +7,7 @@ const BASE_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.voicesradio
 const API_TIMEOUT = 10000; // 10 seconds
 
 // Helper function to ensure URLs don't have double slashes
-const cleanUrl = (base, path) => {
+const cleanUrl = (base: string, path: string): string => {
   // Remove trailing slash from base and leading slash from path
   const cleanBase = base.endsWith('/') ? base.slice(0, -1) : base;
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
@@ -33,7 +33,7 @@ const api = axios.create({
 });
 
 // Add auth token to each request if it exists
-const addAuthToken = (config) => {
+const addAuthToken = (config: any) => {
   const token = Cookies.get('auth_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -185,7 +185,7 @@ export const deleteArtist = async (id: string) => {
 };
 
 // Extract Mixcloud key from URL
-export const extractMixcloudKey = (url) => {
+export const extractMixcloudKey = (url: string): string | null => {
   if (!url) return null;
   // Remove trailing slash if present
   const cleanUrl = url.endsWith('/') ? url.slice(0, -1) : url;
@@ -195,7 +195,7 @@ export const extractMixcloudKey = (url) => {
 };
 
 // Fetch show data from Mixcloud
-export const fetchMixcloudShowData = async (mixcloudUrl) => {
+export const fetchMixcloudShowData = async (mixcloudUrl: string) => {
   try {
     const key = extractMixcloudKey(mixcloudUrl);
     if (!key) throw new Error('Invalid Mixcloud URL');
@@ -384,7 +384,7 @@ export const fetchSoundCloudArtistData = async (soundcloudUrl: string) => {
     const username = soundcloudUrl.split('/').pop() || '';
     
     // Try to get the latest tracks to extract genres
-    let genres = [];
+    let genres: string[] = [];
     try {
       const tracksResponse = await fetch(
         `https://api.soundcloud.com/users/${userData.id}/tracks?limit=5`,
@@ -400,17 +400,17 @@ export const fetchSoundCloudArtistData = async (soundcloudUrl: string) => {
         
         // Extract genres from tracks
         const allGenres = tracks
-          .map(track => track.genre)
-          .filter(genre => genre && genre.trim() !== '')
+          .map((track: any) => track.genre)
+          .filter((genre: any) => genre && genre.trim() !== '')
           .concat(
             // Also try to extract genres from tags
             tracks
-              .flatMap(track => (track.tag_list || '').split(' '))
-              .filter(tag => tag && tag.trim() !== '')
+              .flatMap((track: any) => (track.tag_list || '').split(' '))
+              .filter((tag: any) => tag && tag.trim() !== '')
           );
         
         // Get unique genres
-        genres = [...new Set(allGenres)].slice(0, 3);
+        genres = Array.from(new Set<string>(allGenres)).slice(0, 3);
       }
     } catch (err) {
       console.warn('Error fetching tracks for genres:', err);
