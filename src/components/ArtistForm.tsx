@@ -45,7 +45,6 @@ export default function ArtistForm({ initialData, onSubmit, isLoading }: ArtistF
       mixcloudUsername: initialData?.mixcloudUsername || '',
       soundcloudUsername: initialData?.soundcloudUsername || '',
       isActive: initialData?.isActive || true,
-      isResident: initialData?.isResident || false,
       featured: initialData?.featured || false,
       socialLinks: initialData?.socialLinks || {
         instagram: '',

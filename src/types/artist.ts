@@ -28,7 +28,6 @@ export interface Artist {
   mixcloudUsername?: string;
   soundcloudUsername?: string;
   isActive: boolean;
-  isResident: boolean;
   featured: boolean;
   socialLinks?: {
     instagram?: string;

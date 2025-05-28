@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
   FormControl,
   FormLabel,
-  Input,
+  Select,
+  Textarea,
   VStack,
   Text,
   useToast,
@@ -19,66 +20,83 @@ import {
   Badge,
   IconButton,
   HStack,
-  Select,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  Progress,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
 } from '@chakra-ui/react';
 import { DeleteIcon } from '@chakra-ui/icons';
-import { Show } from '@/types/artist';
+import { Artist, Show } from '@/types/artist';
+import { getArtists, addShowToArtist, fetchMixcloudShowData, fetchSoundCloudShowData } from '@/lib/api';
 
 interface BulkShowUploadUtilityProps {
-  onUpload: (shows: Show[]) => Promise<void>;
+  isOpen: boolean;
+  onClose: () => void;
+  onUpload?: (shows: Show[]) => Promise<void>;
   isLoading?: boolean;
 }
 
-export default function BulkShowUploadUtility({ onUpload, isLoading = false }: BulkShowUploadUtilityProps) {
-  const [shows, setShows] = useState<Show[]>([]);
-  const [title, setTitle] = useState('');
-  const [date, setDate] = useState('');
-  const [description, setDescription] = useState('');
-  const [mixcloudUrl, setMixcloudUrl] = useState('');
-  const [soundcloudUrl, setSoundcloudUrl] = useState('');
+interface ParsedShow {
+  url: string;
+  platform: 'mixcloud' | 'soundcloud';
+  status: 'pending' | 'processing' | 'success' | 'error';
+  data?: Show;
+  error?: string;
+}
+
+export default function BulkShowUploadUtility({ isOpen, onClose, onUpload, isLoading = false }: BulkShowUploadUtilityProps) {
+  const [artists, setArtists] = useState<Artist[]>([]);
+  const [selectedArtistId, setSelectedArtistId] = useState('');
+  const [urlsInput, setUrlsInput] = useState('');
+  const [parsedShows, setParsedShows] = useState<ParsedShow[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
   const toast = useToast();
 
-  const handleAddShow = () => {
-    if (!title || !date) {
-      toast({
-        title: 'Missing required fields',
-        description: 'Title and date are required',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
-      return;
-    }
-
-    const newShow: Show = {
-      title,
-      date: new Date(date).toISOString(),
-      description: description || undefined,
-      mixcloudUrl: mixcloudUrl || undefined,
-      soundcloudUrl: soundcloudUrl || undefined,
+  // Fetch artists on component mount
+  useEffect(() => {
+    const fetchArtistsData = async () => {
+      try {
+        const artistsData = await getArtists();
+        setArtists(artistsData);
+      } catch (error) {
+        console.error('Error fetching artists:', error);
+        toast({
+          title: 'Error fetching artists',
+          description: 'Please refresh and try again',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+      }
     };
 
-    setShows([...shows, newShow]);
-    resetForm();
+    if (isOpen) {
+      fetchArtistsData();
+    }
+  }, [isOpen, toast]);
+
+  const detectPlatform = (url: string): 'mixcloud' | 'soundcloud' | null => {
+    if (url.includes('mixcloud.com')) return 'mixcloud';
+    if (url.includes('soundcloud.com')) return 'soundcloud';
+    return null;
   };
 
-  const handleRemoveShow = (index: number) => {
-    setShows(shows.filter((_, i) => i !== index));
-  };
-
-  const resetForm = () => {
-    setTitle('');
-    setDate('');
-    setDescription('');
-    setMixcloudUrl('');
-    setSoundcloudUrl('');
-  };
-
-  const handleSubmit = async () => {
-    if (shows.length === 0) {
+  const parseUrls = () => {
+    const urls = urlsInput.trim().split('\n').filter(url => url.trim() !== '');
+    
+    if (urls.length === 0) {
       toast({
-        title: 'No shows to upload',
-        description: 'Please add at least one show',
+        title: 'No URLs provided',
+        description: 'Please enter at least one URL',
         status: 'warning',
         duration: 3000,
         isClosable: true,
@@ -86,135 +104,307 @@ export default function BulkShowUploadUtility({ onUpload, isLoading = false }: B
       return;
     }
 
-    try {
-      await onUpload(shows);
-      setShows([]);
+    const shows: ParsedShow[] = [];
+    
+    for (const url of urls) {
+      const cleanUrl = url.trim();
+      const platform = detectPlatform(cleanUrl);
+      
+      if (platform) {
+        shows.push({
+          url: cleanUrl,
+          platform,
+          status: 'pending',
+        });
+      } else {
+        shows.push({
+          url: cleanUrl,
+          platform: 'soundcloud', // Default fallback
+          status: 'error',
+          error: 'Invalid URL - must be Mixcloud or SoundCloud',
+        });
+      }
+    }
+
+    setParsedShows(shows);
+  };
+
+  const fetchShowData = async (parsedShow: ParsedShow): Promise<Show> => {
+    if (parsedShow.platform === 'mixcloud') {
+      return await fetchMixcloudShowData(parsedShow.url);
+    } else {
+      return await fetchSoundCloudShowData(parsedShow.url);
+    }
+  };
+
+  const processShows = async () => {
+    if (!selectedArtistId) {
       toast({
-        title: 'Shows uploaded successfully',
-        status: 'success',
+        title: 'No artist selected',
+        description: 'Please select an artist',
+        status: 'warning',
         duration: 3000,
         isClosable: true,
       });
-    } catch (error) {
-      toast({
-        title: 'Error uploading shows',
-        description: 'Please try again',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
+      return;
+    }
+
+    setIsProcessing(true);
+    setProcessingProgress(0);
+
+    const updatedShows = [...parsedShows];
+    let processedCount = 0;
+
+    for (let i = 0; i < updatedShows.length; i++) {
+      const show = updatedShows[i];
+      
+      if (show.status === 'error') {
+        processedCount++;
+        setProcessingProgress((processedCount / updatedShows.length) * 100);
+        continue;
+      }
+
+      try {
+        // Update status to processing
+        updatedShows[i] = { ...show, status: 'processing' };
+        setParsedShows([...updatedShows]);
+
+        // Fetch show data
+        const showData = await fetchShowData(show);
+        
+        // Add show to artist
+        await addShowToArtist(selectedArtistId, showData);
+        
+        // Update status to success
+        updatedShows[i] = { 
+          ...show, 
+          status: 'success', 
+          data: showData 
+        };
+        
+      } catch (error) {
+        console.error(`Error processing ${show.url}:`, error);
+        updatedShows[i] = { 
+          ...show, 
+          status: 'error', 
+          error: error instanceof Error ? error.message : 'Failed to process URL'
+        };
+      }
+
+      processedCount++;
+      setProcessingProgress((processedCount / updatedShows.length) * 100);
+      setParsedShows([...updatedShows]);
+    }
+
+    setIsProcessing(false);
+    
+    const successCount = updatedShows.filter(s => s.status === 'success').length;
+    const errorCount = updatedShows.filter(s => s.status === 'error').length;
+    
+    toast({
+      title: 'Processing complete',
+      description: `${successCount} shows uploaded successfully, ${errorCount} failed`,
+      status: successCount > 0 ? 'success' : 'error',
+      duration: 5000,
+      isClosable: true,
+    });
+  };
+
+  const removeShow = (index: number) => {
+    setParsedShows(parsedShows.filter((_, i) => i !== index));
+  };
+
+  const resetForm = () => {
+    setSelectedArtistId('');
+    setUrlsInput('');
+    setParsedShows([]);
+    setProcessingProgress(0);
+  };
+
+  const handleClose = () => {
+    if (!isProcessing) {
+      resetForm();
+      onClose();
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'success': return 'green';
+      case 'error': return 'red';
+      case 'processing': return 'blue';
+      default: return 'gray';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'pending': return 'Pending';
+      case 'processing': return 'Processing';
+      case 'success': return 'Success';
+      case 'error': return 'Error';
+      default: return 'Unknown';
     }
   };
 
   return (
-    <Box p={4} borderWidth="1px" borderRadius="lg">
-      <VStack spacing={6} align="stretch">
-        <Text fontSize="xl" fontWeight="bold">Bulk Show Upload</Text>
-        
-        <FormControl>
-          <FormLabel>Title</FormLabel>
-          <Input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Show title"
-          />
-        </FormControl>
-
-        <FormControl>
-          <FormLabel>Date</FormLabel>
-          <Input
-            type="datetime-local"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
-        </FormControl>
-
-        <FormControl>
-          <FormLabel>Description</FormLabel>
-          <Input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Show description"
-          />
-        </FormControl>
-
-        <FormControl>
-          <FormLabel>Mixcloud URL</FormLabel>
-          <Input
-            value={mixcloudUrl}
-            onChange={(e) => setMixcloudUrl(e.target.value)}
-            placeholder="https://www.mixcloud.com/..."
-          />
-        </FormControl>
-
-        <FormControl>
-          <FormLabel>SoundCloud URL</FormLabel>
-          <Input
-            value={soundcloudUrl}
-            onChange={(e) => setSoundcloudUrl(e.target.value)}
-            placeholder="https://soundcloud.com/..."
-          />
-        </FormControl>
-
-        <Button
-          onClick={handleAddShow}
-          colorScheme="blue"
-          variant="outline"
-        >
-          Add Show
-        </Button>
-
-        {shows.length > 0 && (
-          <Box>
-            <Text fontSize="lg" fontWeight="bold" mb={4}>Added Shows</Text>
-            <Table variant="simple">
-              <Thead>
-                <Tr>
-                  <Th>Title</Th>
-                  <Th>Date</Th>
-                  <Th>Links</Th>
-                  <Th>Actions</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {shows.map((show, index) => (
-                  <Tr key={index}>
-                    <Td>{show.title}</Td>
-                    <Td>{new Date(show.date).toLocaleDateString()}</Td>
-                    <Td>
-                      <HStack spacing={2}>
-                        {show.mixcloudUrl && (
-                          <Badge colorScheme="purple">Mixcloud</Badge>
-                        )}
-                        {show.soundcloudUrl && (
-                          <Badge colorScheme="orange">SoundCloud</Badge>
-                        )}
-                      </HStack>
-                    </Td>
-                    <Td>
-                      <IconButton
-                        aria-label="Remove show"
-                        icon={<DeleteIcon />}
-                        size="sm"
-                        onClick={() => handleRemoveShow(index)}
-                      />
-                    </Td>
-                  </Tr>
+    <Modal isOpen={isOpen} onClose={handleClose} size="xl" closeOnOverlayClick={!isProcessing}>
+      <ModalOverlay />
+      <ModalContent>
+        <ModalHeader>Bulk Show Upload</ModalHeader>
+        {!isProcessing && <ModalCloseButton />}
+        <ModalBody>
+          <VStack spacing={6} align="stretch">
+            <FormControl isRequired>
+              <FormLabel>Select Artist</FormLabel>
+              <Select
+                value={selectedArtistId}
+                onChange={(e) => setSelectedArtistId(e.target.value)}
+                placeholder="Choose an artist..."
+                isDisabled={isProcessing}
+              >
+                {artists.map((artist) => (
+                  <option key={artist._id} value={artist._id}>
+                    {artist.name}
+                  </option>
                 ))}
-              </Tbody>
-            </Table>
-          </Box>
-        )}
+              </Select>
+            </FormControl>
 
-        <Button
-          onClick={handleSubmit}
-          colorScheme="green"
-          isLoading={isLoading}
-          isDisabled={shows.length === 0}
-        >
-          Upload Shows
-        </Button>
-      </VStack>
-    </Box>
+            <FormControl isRequired>
+              <FormLabel>Show URLs</FormLabel>
+              <Textarea
+                value={urlsInput}
+                onChange={(e) => setUrlsInput(e.target.value)}
+                placeholder={`Paste Mixcloud or SoundCloud URLs, one per line:
+
+https://www.mixcloud.com/artist/show-name/
+https://soundcloud.com/artist/track-name
+https://www.mixcloud.com/artist/another-show/`}
+                rows={8}
+                isDisabled={isProcessing}
+              />
+              <Text fontSize="sm" color="gray.500" mt={2}>
+                Enter one URL per line. Supports both Mixcloud and SoundCloud URLs.
+              </Text>
+            </FormControl>
+
+            {urlsInput.trim() && !isProcessing && (
+              <Button
+                onClick={parseUrls}
+                colorScheme="blue"
+                variant="outline"
+                isDisabled={!urlsInput.trim()}
+              >
+                Parse URLs
+              </Button>
+            )}
+
+            {isProcessing && (
+              <Box>
+                <Text mb={2}>Processing shows... {Math.round(processingProgress)}%</Text>
+                <Progress value={processingProgress} colorScheme="blue" />
+              </Box>
+            )}
+
+            {parsedShows.length > 0 && (
+              <Box>
+                <Text fontSize="lg" fontWeight="bold" mb={4}>
+                  Detected Shows ({parsedShows.length})
+                </Text>
+                
+                {parsedShows.some(s => s.status === 'error') && (
+                  <Alert status="warning" mb={4}>
+                    <AlertIcon />
+                    <Box>
+                      <AlertTitle>Some URLs could not be processed!</AlertTitle>
+                      <AlertDescription>
+                        Invalid URLs will be skipped during upload.
+                      </AlertDescription>
+                    </Box>
+                  </Alert>
+                )}
+
+                <Table variant="simple" size="sm">
+                  <Thead>
+                    <Tr>
+                      <Th>URL</Th>
+                      <Th>Platform</Th>
+                      <Th>Status</Th>
+                      <Th>Title</Th>
+                      <Th>Actions</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {parsedShows.map((show, index) => (
+                      <Tr key={index}>
+                        <Td>
+                          <Text isTruncated maxW="200px" title={show.url}>
+                            {show.url}
+                          </Text>
+                        </Td>
+                        <Td>
+                          <Badge colorScheme={show.platform === 'mixcloud' ? 'purple' : 'orange'}>
+                            {show.platform === 'mixcloud' ? 'Mixcloud' : 'SoundCloud'}
+                          </Badge>
+                        </Td>
+                        <Td>
+                          <Badge colorScheme={getStatusColor(show.status)}>
+                            {getStatusText(show.status)}
+                          </Badge>
+                        </Td>
+                        <Td>
+                          {show.data?.title ? (
+                            <Text isTruncated maxW="150px" title={show.data.title}>
+                              {show.data.title}
+                            </Text>
+                          ) : show.error ? (
+                            <Text fontSize="sm" color="red.500" isTruncated maxW="150px" title={show.error}>
+                              {show.error}
+                            </Text>
+                          ) : (
+                            <Text color="gray.400">-</Text>
+                          )}
+                        </Td>
+                        <Td>
+                          {!isProcessing && (
+                            <IconButton
+                              aria-label="Remove show"
+                              icon={<DeleteIcon />}
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => removeShow(index)}
+                            />
+                          )}
+                        </Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </Box>
+            )}
+          </VStack>
+        </ModalBody>
+
+        <ModalFooter>
+          <Button 
+            variant="ghost" 
+            mr={3} 
+            onClick={handleClose}
+            isDisabled={isProcessing}
+          >
+            {isProcessing ? 'Processing...' : 'Cancel'}
+          </Button>
+          <Button
+            onClick={processShows}
+            colorScheme="green"
+            isDisabled={!selectedArtistId || parsedShows.length === 0 || isProcessing}
+            isLoading={isProcessing}
+          >
+            Upload Shows
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
   );
 }

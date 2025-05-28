@@ -22,13 +22,15 @@ import {
   InputLeftElement,
   Input,
   Select,
-  HStack
+  HStack,
+  Button,
+  InputRightElement
 } from '@chakra-ui/react';
 import Navbar from '@/components/Navbar';
 import { getArtists } from '@/lib/api';
 import { Artist } from '@/types/artist';
 import { FiUsers, FiBarChart2, FiStar, FiEye } from 'react-icons/fi';
-import { SearchIcon } from '@chakra-ui/icons';
+import { SearchIcon, CloseIcon } from '@chakra-ui/icons';
 
 export default function DashboardPage() {
   const [artists, setArtists] = useState<Artist[]>([]);
@@ -67,8 +69,34 @@ export default function DashboardPage() {
 
   const totalArtists = artists.length;
   const totalShows = artists.reduce((acc, artist) => acc + (artist.shows?.length || 0), 0);
-  const totalResidents = artists.filter(artist => artist.isResident).length;
   const totalFeatured = artists.filter(artist => artist.featured).length;
+
+  // Filter artists based on search term and status filter
+  const filteredArtists = artists.filter((artist) => {
+    // Search filter - check if name contains search term (case insensitive)
+    const matchesSearch = searchTerm.trim() === '' || 
+      artist.name.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Status filter
+    let matchesStatus = true;
+    switch (statusFilter) {
+      case 'active':
+        matchesStatus = artist.isActive;
+        break;
+      case 'inactive':
+        matchesStatus = !artist.isActive;
+        break;
+      case 'featured':
+        matchesStatus = artist.featured;
+        break;
+      case 'all':
+      default:
+        matchesStatus = true;
+        break;
+    }
+    
+    return matchesSearch && matchesStatus;
+  });
 
   interface StatCardProps {
     title: string;
@@ -129,10 +157,9 @@ export default function DashboardPage() {
               </Box>
             )}
   
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={{ base: 5, lg: 8 }} mb={8}>
+            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={{ base: 5, lg: 8 }} mb={8}>
               <StatCard title={'Total Artists'} stat={totalArtists} icon={<Icon as={FiUsers} w={10} h={10} />} />
               <StatCard title={'Total Shows'} stat={totalShows} icon={<Icon as={FiBarChart2} w={10} h={10} />} />
-              <StatCard title={'Resident Artists'} stat={totalResidents} icon={<Icon as={FiStar} w={10} h={10} />} />
               <StatCard title={'Featured Artists'} stat={totalFeatured} icon={<Icon as={FiEye} w={10} h={10} />} />
             </SimpleGrid>
   
@@ -153,6 +180,13 @@ export default function DashboardPage() {
                       _hover={{ borderColor: 'gray.400' }}
                       _focus={{ borderColor: 'blue.500', boxShadow: '0 0 0 1px var(--chakra-colors-blue-500)' }}
                     />
+                    <InputRightElement>
+                      {searchTerm && (
+                        <Button size="sm" variant="ghost" onClick={() => setSearchTerm('')}>
+                          <CloseIcon />
+                        </Button>
+                      )}
+                    </InputRightElement>
                   </InputGroup>
                 </Box>
                 <Box>
@@ -175,14 +209,18 @@ export default function DashboardPage() {
   
             <Box bg={cardBg} p={6} borderRadius="lg" shadow="xl" borderWidth="1px" borderColor={boxBorderColor}>
               <Heading as="h2" size="lg" mb={6} color={textColorPrimary}>
-                Recent Artists
+                Recent Artists {filteredArtists.length > 0 && `(${filteredArtists.length})`}
               </Heading>
   
-              {artists.length === 0 && !error ? ( // Show only if no artists and no error
-                <Text textAlign="center" py={10} color={textColorSecondary}>No artists found.</Text>
+              {filteredArtists.length === 0 && !error ? ( // Show only if no artists and no error
+                <Text textAlign="center" py={10} color={textColorSecondary}>
+                  {searchTerm || statusFilter !== 'all' 
+                    ? `No artists found matching your search criteria.` 
+                    : 'No artists found.'}
+                </Text>
               ) : (
                 // Only map if artists array is not empty
-                artists.length > 0 && artists.slice(0, 5).map((artist) => (
+                filteredArtists.length > 0 && filteredArtists.slice(0, 5).map((artist) => (
                   <Flex key={artist._id} align="center" justify="space-between" mb={4} pb={4} 
                         borderBottomWidth="1px" borderColor={flexBorderColor} 
                         _last={{ borderBottomWidth: 0, mb:0, pb:0 }}>
@@ -196,7 +234,6 @@ export default function DashboardPage() {
                       <Tag size="sm" colorScheme={artist.isActive ? 'green' : 'red'} variant="solid">
                         {artist.isActive ? 'Active' : 'Inactive'}
                       </Tag>
-                      {artist.isResident && <Tag size="sm" colorScheme="purple" variant="solid">Resident</Tag>}
                       {artist.featured && <Tag size="sm" colorScheme="orange" variant="solid">Featured</Tag>}
                     </HStack>
                     <Flex gap={3} justify="flex-start" minW="100px">

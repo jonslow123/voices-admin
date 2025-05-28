@@ -210,9 +210,6 @@ export default function ArtistDetailPage() {
                             <Tag size="md" colorScheme={artist.isActive ? 'green' : 'red'} variant="solid">
                               {artist.isActive ? 'Active' : 'Inactive'}
                             </Tag>
-                            {artist.isResident && (
-                              <Tag size="md" colorScheme="purple" variant="solid">Resident</Tag>
-                            )}
                             {artist.featured && (
                               <Tag size="md" colorScheme="orange" variant="solid">Featured</Tag>
                             )}

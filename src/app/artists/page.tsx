@@ -84,8 +84,6 @@ export default function ArtistsPage() {
         result = result.filter(artist => artist.isActive);
       } else if (statusFilter === 'inactive') {
         result = result.filter(artist => !artist.isActive);
-      } else if (statusFilter === 'resident') {
-        result = result.filter(artist => artist.isResident);
       } else if (statusFilter === 'featured') {
         result = result.filter(artist => artist.featured);
       }
@@ -119,9 +117,6 @@ export default function ArtistsPage() {
               <Tag size="sm" colorScheme={artist.isActive ? 'green' : 'red'} variant="solid">
                 {artist.isActive ? 'Active' : 'Inactive'}
               </Tag>
-              {artist.isResident && (
-                <Tag size="sm" colorScheme="purple" variant="solid">Resident</Tag>
-              )}
               {artist.featured && (
                 <Tag size="sm" colorScheme="orange" variant="solid">Featured</Tag>
               )}
@@ -207,7 +202,6 @@ export default function ArtistsPage() {
                   <option value="all">All Statuses</option>
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
-                  <option value="resident">Resident</option>
                   <option value="featured">Featured</option>
                 </Select>
               </Box>
@@ -277,9 +271,6 @@ export default function ArtistsPage() {
                             <Tag size="sm" colorScheme={artist.isActive ? 'green' : 'red'} variant="solid">
                               {artist.isActive ? 'Active' : 'Inactive'}
                             </Tag>
-                            {artist.isResident && (
-                              <Tag size="sm" colorScheme="purple" variant="solid">Resident</Tag>
-                            )}
                             {artist.featured && (
                               <Tag size="sm" colorScheme="orange" variant="solid">Featured</Tag>
                             )}

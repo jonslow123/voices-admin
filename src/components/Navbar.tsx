@@ -15,6 +15,7 @@ import {
   MenuList,
   MenuItem,
   MenuDivider,
+  useDisclosure,
 } from '@chakra-ui/react';
 import {
   HamburgerIcon,
@@ -22,17 +23,32 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { useState } from 'react';
 import BulkShowUploadUtility from './BulkShowUploadUtility';
+import { Show } from '@/types/artist';
 
 export default function Navbar() {
   const { logout } = useAuth();
-  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const { isOpen, onOpen, onClose } = useDisclosure();
   const pathname = usePathname();
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleLogout = async () => {
     try {
       await logout();
     } catch (error) {
       console.error('Logout failed:', error);
+    }
+  };
+
+  const handleUpload = async (shows: Show[]) => {
+    setIsUploading(true);
+    try {
+      // TODO: Implement the actual upload logic here
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulated delay
+      console.log('Uploading shows:', shows);
+    } catch (error) {
+      console.error('Upload failed:', error);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -88,7 +104,7 @@ export default function Navbar() {
               >
                 Artists
               </MenuItem>
-              <MenuItem onClick={() => setIsBulkUploadOpen(true)}>
+              <MenuItem onClick={onOpen}>
                 Bulk Show Upload
               </MenuItem>
               <MenuDivider />
@@ -99,8 +115,10 @@ export default function Navbar() {
       </Flex>
 
       <BulkShowUploadUtility
-        isOpen={isBulkUploadOpen}
-        onClose={() => setIsBulkUploadOpen(false)}
+        isOpen={isOpen}
+        onClose={onClose}
+        onUpload={handleUpload}
+        isLoading={isUploading}
       />
     </Box>
   );

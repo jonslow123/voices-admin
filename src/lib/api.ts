@@ -2,7 +2,7 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 
 // Fix the API URL to avoid double slashes
-const BASE_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.voicesradio.co.uk';
+const BASE_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.voicesradio.co.uk/api';
 // Set a reasonable timeout for API requests
 const API_TIMEOUT = 10000; // 10 seconds
 
