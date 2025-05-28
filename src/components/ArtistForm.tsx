@@ -52,7 +52,6 @@ export default function ArtistForm({ initialData, onSubmit, isLoading }: ArtistF
         twitter: '',
         website: ''
       },
-      profileImageUrl: initialData?.profileImageUrl || '',
     }
   });
 
@@ -62,10 +61,11 @@ export default function ArtistForm({ initialData, onSubmit, isLoading }: ArtistF
   const [shows, setShows] = useState<any[]>(initialData?.shows || []);
 
   const addGenre = () => {
-    if (genreInput.trim() && !genres.includes(genreInput.trim())) {
-      setValue('genres', [...genres, genreInput.trim()]);
+    const currentGenres = genres || [];
+    if (genreInput.trim() && !currentGenres.includes(genreInput.trim())) {
+      setValue('genres', [...currentGenres, genreInput.trim()]);
       setGenreInput('');
-    } else if (genres.includes(genreInput.trim())) {
+    } else if (currentGenres.includes(genreInput.trim())) {
       toast({
         title: "Genre already added.",
         status: "warning",
@@ -76,7 +76,8 @@ export default function ArtistForm({ initialData, onSubmit, isLoading }: ArtistF
   };
 
   const removeGenre = (genreToRemove: string) => {
-    setValue('genres', genres.filter(genre => genre !== genreToRemove));
+    const currentGenres = genres || [];
+    setValue('genres', currentGenres.filter(genre => genre !== genreToRemove));
   };
 
   const fetchArtistDetails = async () => {
@@ -137,11 +138,8 @@ export default function ArtistForm({ initialData, onSubmit, isLoading }: ArtistF
   };
 
   const handleFormSubmit = (data: Partial<Artist>) => {
-    // Remove any fields that aren't in the Artist type
-    const { profileImageUrl, ...validData } = data;
-    
     const formData = {
-      ...validData,
+      ...data,
       shows: shows
     };
     
@@ -228,7 +226,7 @@ export default function ArtistForm({ initialData, onSubmit, isLoading }: ArtistF
         <Box mb={2}>
           <Heading as="h3" size="sm" mb={1}>Primary Genres</Heading>
           <Flex wrap="wrap" gap={2} mb={2}>
-            {genres.slice(0, 3).map((genre) => (
+            {(genres || []).slice(0, 3).map((genre) => (
               <Tag
                 size="lg"
                 key={genre}
@@ -240,14 +238,14 @@ export default function ArtistForm({ initialData, onSubmit, isLoading }: ArtistF
                 <TagCloseButton onClick={() => removeGenre(genre)} />
               </Tag>
             ))}
-            {genres.length === 0 && <Text color="gray.400">No genres added.</Text>}
+            {(genres || []).length === 0 && <Text color="gray.400">No genres added.</Text>}
           </Flex>
         </Box>
-        {genres.length > 3 && (
+        {(genres || []).length > 3 && (
           <Box mb={2}>
             <Heading as="h3" size="sm" mb={1}>Other Genres</Heading>
             <Flex wrap="wrap" gap={2} mb={2}>
-              {genres.slice(3).map((genre) => (
+              {(genres || []).slice(3).map((genre) => (
                 <Tag
                   size="lg"
                   key={genre}
